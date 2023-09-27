@@ -1,12 +1,21 @@
 package com.wayne.currencyexchanger
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Rect
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.widget.AdapterView
+import android.widget.AdapterView.OnItemSelectedListener
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
@@ -18,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.wayne.currencyexchanger.databinding.ActivityMainBinding
+import com.wayne.currencyexchanger.repository.APIService
 import com.wayne.currencyexchanger.view.CurrencyRateAdapter
 import com.wayne.currencyexchanger.view.CurrencySymbolAdapter
 import com.wayne.currencyexchanger.viewmodel.MainViewModel
@@ -73,6 +83,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val mConnectivityManager by lazy {
+        (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
+    }
+
+    private val mNetworkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            super.onAvailable(network)
+        }
+
+        override fun onLost(network: Network) {
+            super.onLost(network)
+        }
+    }
+
+    private val mNetworkRequest by lazy {
+        NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .build()
+    }
+
+    private val mOnItemSelectedListener = object : OnItemSelectedListener {
+        override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+            p0?.getItemAtPosition(p2)?.apply {
+                Toast.makeText(this@MainActivity, "$this", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        override fun onNothingSelected(p0: AdapterView<*>?) {
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -89,15 +131,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-        lifecycleScope.launch(Dispatchers.IO) {
-//            APIService.requestLatest("USD")
-//            APIService.requestCurrencies()
-        }
-
         mMainViewModel.retrieveCurrenciesAsync()
-        mMainViewModel.retrieveHistoryDataAsync("USD")
+
+        mMainViewModel.retrieveHistoryDataAsync("")
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                launch {
+                    repositoryStatusChanged()
+                }
+
                 launch {
                     loadPersistData()
                 }
@@ -135,14 +178,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        mConnectivityManager.registerNetworkCallback(mNetworkRequest, mNetworkCallback)
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        mConnectivityManager.unregisterNetworkCallback(mNetworkCallback)
+    }
+
+    private suspend fun repositoryStatusChanged() {
+        mMainViewModel.repositoryStatus.collect {
+            if (it == APIService.CODE_CURRENCIES_RETRIEVED) {
+                mMainViewModel.retrieveCurrenciesAsync()
+            }
+        }
+    }
+
     private suspend fun loadAvailableCurrency() {
         mMainViewModel.currencies.collect {
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                mActivityMainBinding.spinnerCurrency.adapter =
-                    CurrencySymbolAdapter(
-                        this,
-                        it.map { currencyEntity -> currencyEntity.symbol }
-                    )
+                mActivityMainBinding.spinnerCurrency.apply {
+                    adapter =
+                        CurrencySymbolAdapter(
+                            this@MainActivity,
+                            it.map { currencyEntity -> currencyEntity.symbol }
+                        )
+
+                    onItemSelectedListener = mOnItemSelectedListener
+
+                    mMainViewModel.retrieveHistoryDataAsync(selectedItem as String)
+                }
             }
         }
     }

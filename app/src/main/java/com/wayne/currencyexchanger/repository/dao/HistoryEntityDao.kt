@@ -18,5 +18,5 @@ interface HistoryEntityDao {
     fun insert(historyEntity: HistoryEntity)
 
     @Query("SELECT * FROM HISTORY WHERE BASE_CURRENCY = :baseCurrency")
-    fun query(baseCurrency: String): HistoryEntity
+    fun query(baseCurrency: String): HistoryEntity?
 }

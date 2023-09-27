@@ -3,7 +3,6 @@ package com.wayne.currencyexchanger.repository
 import android.net.Uri
 import android.util.Log
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
-import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -11,6 +10,8 @@ import com.wayne.currencyexchanger.repository.DatabaseManager.insert
 import com.wayne.currencyexchanger.repository.entity.CurrencyEntity
 import com.wayne.currencyexchanger.repository.entity.HistoryEntity
 import com.wayne.currencyexchanger.repository.json.LatestData
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import okhttp3.logging.HttpLoggingInterceptor
@@ -76,6 +77,17 @@ object APIService {
 
     private const val APP_ID = "78c06c5b327f4bc9931232c1b924804d"
 
+    private val _repositoryStatus =
+        MutableSharedFlow<Int>(
+            0,
+            1,
+            BufferOverflow.DROP_LATEST
+        )
+    val repositoryStatus = _repositoryStatus
+
+    const val CODE_CURRENCIES_RETRIEVED = 1000
+    const val CODE_LATEST_RATE_RETRIEVED = 1001
+
     suspend fun requestCurrencies() {
         try {
             mAPIInterface.getCurrenciesAsync().await().apply {
@@ -97,7 +109,10 @@ object APIService {
                     mapJsonAdapter.fromJson(response)?.forEach { (key, value) ->
                         CurrencyEntity(key, value).insert()
                     }
+
+                    _repositoryStatus.tryEmit(CODE_CURRENCIES_RETRIEVED)
                 } else {
+                    _repositoryStatus.tryEmit(code())
                 }
             }
         } catch (throwable: Throwable) {
@@ -109,13 +124,14 @@ object APIService {
                 } else {
                     -9999
                 }
+            _repositoryStatus.tryEmit(code)
         }
     }
 
     suspend fun requestLatest(baseCurrency: String) {
         val queryMap = mutableMapOf<String, String>()
         queryMap["app_id"] = APP_ID
-        queryMap["base"] = baseCurrency
+        queryMap["base"] = "GBP"
 
         try {
             mAPIInterface.getLatestAsync(queryMap).await().apply {
@@ -131,11 +147,14 @@ object APIService {
                     latestDataJsonAdapter.fromJson(response)?.apply {
                         HistoryEntity(
                             baseCurrency,
-                            Instant.now().epochSecond,
+                            Instant.now(),
                             rates.toString()
                         ).insert()
                     }
+
+                    repositoryStatus.tryEmit(CODE_LATEST_RATE_RETRIEVED)
                 } else {
+                    repositoryStatus.tryEmit(code())
                 }
             }
         } catch (throwable: Throwable) {
@@ -147,6 +166,8 @@ object APIService {
                 } else {
                     -9999
                 }
+
+            repositoryStatus.tryEmit(code)
         }
     }
 }
