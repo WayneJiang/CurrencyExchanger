@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">CurrencyExchanger</string>
+    <string name="datetime_format" translatable="false">yyyy/MM/dd HH:mm:ss</string>
+    <string name="last_update">Last Update : %s</string>
+    <string name="amount_hint">Enter amounts to exchange</string>
+    <string name="network_error">Network error</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="http_error">HTTP error (%d)</string>
 </resources>

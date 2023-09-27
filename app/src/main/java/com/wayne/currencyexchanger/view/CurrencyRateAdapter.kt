@@ -42,7 +42,7 @@ class CurrencyRateAdapter :
 
             val rate =
                 BigDecimal(currencyPair.second.toDouble())
-                    .setScale(1, RoundingMode.HALF_UP)
+                    .setScale(3, RoundingMode.HALF_UP)
                     .toDouble()
 
             tvRate.text = "$rate"

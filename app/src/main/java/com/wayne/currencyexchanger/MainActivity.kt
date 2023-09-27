@@ -19,11 +19,14 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.wayne.currencyexchanger.databinding.ActivityMainBinding
@@ -32,7 +35,12 @@ import com.wayne.currencyexchanger.view.CurrencyRateAdapter
 import com.wayne.currencyexchanger.view.CurrencySymbolAdapter
 import com.wayne.currencyexchanger.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /*
  * Copyright (c) 2023 GoMore Inc. All rights reserved.
@@ -83,31 +91,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val mConnectivityManager by lazy {
-        (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
-    }
-
-    private val mNetworkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            super.onAvailable(network)
-        }
-
-        override fun onLost(network: Network) {
-            super.onLost(network)
-        }
-    }
-
-    private val mNetworkRequest by lazy {
-        NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .build()
-    }
-
     private val mOnItemSelectedListener = object : OnItemSelectedListener {
         override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-            p0?.getItemAtPosition(p2)?.apply {
-                Toast.makeText(this@MainActivity, "$this", Toast.LENGTH_SHORT).show()
+            p0?.getItemAtPosition(p2)?.let {
+                mMainViewModel.retrieveHistoryDataAsync()
             }
         }
 
@@ -129,14 +116,14 @@ class MainActivity : AppCompatActivity() {
 
                     adapter = mCurrencyRateAdapter
                 }
+
+                edAmount.doAfterTextChanged {
+                    mMainViewModel.retrieveHistoryDataAsync()
+                }
             }
 
-        mMainViewModel.retrieveCurrenciesAsync()
-
-        mMainViewModel.retrieveHistoryDataAsync("")
-
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     repositoryStatusChanged()
                 }
@@ -176,24 +163,56 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
-    }
 
-    override fun onResume() {
-        super.onResume()
-
-        mConnectivityManager.registerNetworkCallback(mNetworkRequest, mNetworkCallback)
-    }
-
-    override fun onPause() {
-        super.onPause()
-
-        mConnectivityManager.unregisterNetworkCallback(mNetworkCallback)
+        mMainViewModel.retrieveCurrenciesAsync()
     }
 
     private suspend fun repositoryStatusChanged() {
         mMainViewModel.repositoryStatus.collect {
-            if (it == APIService.CODE_CURRENCIES_RETRIEVED) {
-                mMainViewModel.retrieveCurrenciesAsync()
+            when (it) {
+                APIService.CODE_CURRENCIES_RETRIEVED -> {
+                    mMainViewModel.retrieveCurrenciesAsync()
+                }
+
+                APIService.CODE_LATEST_RATE_RETRIEVED -> {
+                    val dateTime =
+                        Instant.now()
+                            .atZone(ZoneId.systemDefault()).format(
+                                DateTimeFormatter.ofPattern(getString(R.string.datetime_format))
+                            )
+
+                    mMainViewModel.retrieveCurrenciesAsync()
+
+                    Snackbar.make(
+                        mActivityMainBinding.root,
+                        getString(R.string.last_update, dateTime),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+
+                APIService.CODE_NETWORK_ERROR -> {
+                    Snackbar.make(
+                        mActivityMainBinding.root,
+                        getString(R.string.network_error),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+
+                APIService.CODE_UNKNOWN_ERROR -> {
+                    Snackbar.make(
+                        mActivityMainBinding.root,
+                        getString(R.string.unknown_error),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+
+                else -> {
+                    Snackbar.make(
+                        mActivityMainBinding.root,
+                        getString(R.string.http_error, it),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
@@ -210,8 +229,10 @@ class MainActivity : AppCompatActivity() {
 
                     onItemSelectedListener = mOnItemSelectedListener
 
-                    mMainViewModel.retrieveHistoryDataAsync(selectedItem as String)
+                    setSelection(it.indexOfFirst { currencyEntity -> currencyEntity.symbol == "USD" })
                 }
+
+                mMainViewModel.retrieveHistoryDataAsync()
             }
         }
     }
@@ -233,14 +254,47 @@ class MainActivity : AppCompatActivity() {
                         .lenient()
 
                 mapJsonAdapter.fromJson(it.currencyRateMap)?.apply {
-                    mCurrencyRateAdapter.submitList(
-                        map { keyValue ->
-                            Pair(
-                                keyValue.key,
-                                keyValue.value
-                            )
+                    val dateTime =
+                        it.timestamp.atZone(ZoneId.systemDefault()).format(
+                            DateTimeFormatter.ofPattern(getString(R.string.datetime_format))
+                        )
+
+                    mActivityMainBinding.tvUpdate.text = getString(R.string.last_update, dateTime)
+
+                    mCurrencyRateAdapter.apply {
+                        submitList(
+                            map { keyValue ->
+                                Pair(
+                                    keyValue.key,
+                                    keyValue.value
+                                )
+                            }
+                        )
+
+                        val amounts =
+                            if (mActivityMainBinding.edAmount.text?.isNotEmpty() == true) {
+                                mActivityMainBinding.edAmount.text.toString().toFloat()
+                            } else {
+                                1f
+                            }
+
+                        delay(100)
+
+                        currentList.singleOrNull { currencyEntity ->
+                            currencyEntity.first == (mActivityMainBinding.spinnerCurrency.selectedItem as String)
+                        }?.let { rate ->
+                            val exchangedList =
+                                currentList
+                                    .map { historyData ->
+                                        val exchangedValue =
+                                            historyData.second * amounts / rate.second
+
+                                        Pair(historyData.first, exchangedValue)
+                                    }
+
+                            submitList(exchangedList)
                         }
-                    )
+                    }
                 }
             }
         }

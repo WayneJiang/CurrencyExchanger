@@ -25,6 +25,5 @@ object DatabaseManager {
 
     fun HistoryEntity.insert() = mDatabaseAbstract.getHistoryEntityDao().insert(this)
 
-    fun queryHistoryEntity(baseCurrency: String) =
-        mDatabaseAbstract.getHistoryEntityDao().query(baseCurrency)
+    fun queryHistoryEntity() = mDatabaseAbstract.getHistoryEntityDao().query()
 }

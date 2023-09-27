@@ -1,5 +1,6 @@
 package com.wayne.currencyexchanger.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wayne.currencyexchanger.repository.APIService
@@ -33,27 +34,29 @@ class MainViewModel : ViewModel() {
 
     fun retrieveCurrenciesAsync() =
         viewModelScope.launch(Dispatchers.IO) {
-            val currencyEntities = DatabaseManager.queryCurrencyEntities()
+            var currencyEntities = DatabaseManager.queryCurrencyEntities()
 
             if (currencyEntities.isEmpty()) {
                 APIService.requestCurrencies()
-            } else {
-                _currencies.tryEmit(currencyEntities)
+                currencyEntities = DatabaseManager.queryCurrencyEntities()
             }
+
+            _currencies.tryEmit(currencyEntities)
         }
 
-    fun retrieveHistoryDataAsync(baseCurrency: String) =
+    fun retrieveHistoryDataAsync() =
         viewModelScope.launch(Dispatchers.IO) {
-            val historyData = DatabaseManager.queryHistoryEntity(baseCurrency)
+            var historyData = DatabaseManager.queryHistoryEntity()
 
-//            if (historyData == null) {
-//                APIService.requestLatest(baseCurrency)
-//            } else {
-//                if (Instant.now().epochSecond - historyData.timestamp.epochSecond > (30 * 60)) {
-                    APIService.requestLatest(baseCurrency)
-//                }
+            if (historyData == null) {
+                APIService.requestLatest()
+            } else {
+                if (Instant.now().epochSecond - historyData.timestamp.epochSecond > (30 * 60)) {
+                    APIService.requestLatest()
+                    historyData = DatabaseManager.queryHistoryEntity()
+                }
 
                 _historyData.tryEmit(historyData)
-//            }
+            }
         }
 }

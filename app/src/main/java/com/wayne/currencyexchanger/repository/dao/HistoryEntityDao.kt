@@ -17,6 +17,6 @@ interface HistoryEntityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(historyEntity: HistoryEntity)
 
-    @Query("SELECT * FROM HISTORY WHERE BASE_CURRENCY = :baseCurrency")
-    fun query(baseCurrency: String): HistoryEntity?
+    @Query("SELECT * FROM HISTORY")
+    fun query(): HistoryEntity?
 }

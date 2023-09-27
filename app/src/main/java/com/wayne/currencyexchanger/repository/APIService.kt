@@ -87,6 +87,8 @@ object APIService {
 
     const val CODE_CURRENCIES_RETRIEVED = 1000
     const val CODE_LATEST_RATE_RETRIEVED = 1001
+    const val CODE_NETWORK_ERROR = 9998
+    const val CODE_UNKNOWN_ERROR = 9999
 
     suspend fun requestCurrencies() {
         try {
@@ -120,18 +122,17 @@ object APIService {
 
             val code =
                 if (throwable is UnknownHostException) {
-                    -9998
+                    CODE_NETWORK_ERROR
                 } else {
-                    -9999
+                    CODE_UNKNOWN_ERROR
                 }
             _repositoryStatus.tryEmit(code)
         }
     }
 
-    suspend fun requestLatest(baseCurrency: String) {
+    suspend fun requestLatest() {
         val queryMap = mutableMapOf<String, String>()
         queryMap["app_id"] = APP_ID
-        queryMap["base"] = "GBP"
 
         try {
             mAPIInterface.getLatestAsync(queryMap).await().apply {
@@ -146,7 +147,7 @@ object APIService {
 
                     latestDataJsonAdapter.fromJson(response)?.apply {
                         HistoryEntity(
-                            baseCurrency,
+                            base,
                             Instant.now(),
                             rates.toString()
                         ).insert()
@@ -162,9 +163,9 @@ object APIService {
 
             val code =
                 if (throwable is UnknownHostException) {
-                    -9998
+                    CODE_NETWORK_ERROR
                 } else {
-                    -9999
+                    CODE_UNKNOWN_ERROR
                 }
 
             repositoryStatus.tryEmit(code)

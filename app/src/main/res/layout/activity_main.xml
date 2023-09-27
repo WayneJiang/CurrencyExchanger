@@ -12,6 +12,7 @@
         android:layout_marginTop="?actionBarSize"
         android:layout_marginEnd="30dp"
         app:endIconMode="clear_text"
+        app:hintTextColor="@android:color/black"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -20,18 +21,30 @@
             android:id="@+id/ed_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="@string/amount_hint"
             android:imeOptions="actionDone"
             android:inputType="numberDecimal" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/spinner_currency"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="30dp"
+        android:dropDownWidth="100dp"
+        android:spinnerMode="dropdown"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/layout_amount" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/tv_update"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="30dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toTopOf="@id/view_recycler"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/view_recycler"
