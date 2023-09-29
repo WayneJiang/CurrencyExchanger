@@ -1,24 +1,20 @@
 package com.wayne.currencyexchanger
 
-import android.util.Log
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.wayne.currencyexchanger.repository.OpenExchangeAPI
-import com.wayne.currencyexchanger.repository.entity.CurrencyEntity
 import com.wayne.currencyexchanger.repository.json.LatestData
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
-import okio.Okio
 import okio.buffer
 import okio.source
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.not
 import org.hamcrest.CoreMatchers.notNullValue
-import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.After
 import org.junit.Before
@@ -27,9 +23,9 @@ import retrofit2.Retrofit
 import java.net.HttpURLConnection
 
 /*
- * Copyright (c) 2023 GoMore Inc. All rights reserved.
+ * Copyright (c) 2023 Wayne Jiang All rights reserved.
  *
- * Created by Wayne Jiang on 2023/09/27
+ * Created by Wayne Jiang on 2023/09/25
  */
 class APIServiceTest {
     private lateinit var mOpenExchangeAPI: OpenExchangeAPI
@@ -75,8 +71,11 @@ class APIServiceTest {
         mMockWebServer.close()
     }
 
+    /**
+     * Test for calling currencies API while success
+     */
     @Test
-    fun testGetCurrenciesAPISuccess(): Unit = runBlocking {
+    fun testGetCurrenciesAPISuccess(): Unit = runTest {
         javaClass.classLoader?.getResourceAsStream("currencies.json")?.source()?.buffer()?.let {
             val mockResponse =
                 MockResponse().apply {
@@ -100,8 +99,11 @@ class APIServiceTest {
         }
     }
 
+    /**
+     * Test for calling currencies API while fail
+     */
     @Test
-    fun testGetCurrenciesAPIFail(): Unit = runBlocking {
+    fun testGetCurrenciesAPIFail(): Unit = runTest {
         val mockResponse =
             MockResponse()
                 .apply {
@@ -118,8 +120,11 @@ class APIServiceTest {
         assertThat(response.code(), `is`(HttpURLConnection.HTTP_FORBIDDEN))
     }
 
+    /**
+     * Test for calling latest data API while success
+     */
     @Test
-    fun testGetLatestAPISuccess(): Unit = runBlocking {
+    fun testGetLatestAPISuccess(): Unit = runTest {
         javaClass.classLoader?.getResourceAsStream("latest.json")?.source()?.buffer()?.let {
             val mockResponse =
                 MockResponse().apply {
@@ -143,8 +148,11 @@ class APIServiceTest {
         }
     }
 
+    /**
+     * Test for calling latest data API while fail
+     */
     @Test
-    fun testGetLatestAPIFail(): Unit = runBlocking {
+    fun testGetLatestAPIFail(): Unit = runTest {
         val mockResponse =
             MockResponse().apply {
                 setResponseCode(HttpURLConnection.HTTP_FORBIDDEN)

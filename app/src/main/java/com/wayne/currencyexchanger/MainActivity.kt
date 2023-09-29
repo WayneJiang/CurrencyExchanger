@@ -1,25 +1,16 @@
 package com.wayne.currencyexchanger
 
-import android.content.Context
 import android.graphics.Color
 import android.graphics.Rect
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.AdapterView.OnItemSelectedListener
-import android.widget.ArrayAdapter
-import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.widget.addTextChangedListener
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -34,16 +25,14 @@ import com.wayne.currencyexchanger.repository.APIService
 import com.wayne.currencyexchanger.view.CurrencyRateAdapter
 import com.wayne.currencyexchanger.view.CurrencySymbolAdapter
 import com.wayne.currencyexchanger.viewmodel.MainViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /*
- * Copyright (c) 2023 GoMore Inc. All rights reserved.
+ * Copyright (c) 2023 Wayne Jiang All rights reserved.
  *
  * Created by Wayne Jiang on 2023/09/25
  */
@@ -93,6 +82,7 @@ class MainActivity : AppCompatActivity() {
 
     private val mOnItemSelectedListener = object : OnItemSelectedListener {
         override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+            // Retrieve persist history data for resetting value for converting
             p0?.getItemAtPosition(p2)?.let {
                 mMainViewModel.retrieveHistoryDataAsync()
             }
@@ -118,6 +108,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 edAmount.doAfterTextChanged {
+                    // Update all of recyclerview data during typing
                     mMainViewModel.retrieveHistoryDataAsync()
                 }
             }
@@ -142,6 +133,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
+        // Make APP to full screen
         window.apply {
             attributes.layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -164,17 +156,23 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Retrieve supported currencies for spinner
         mMainViewModel.retrieveCurrenciesAsync()
     }
 
+    /**
+     * Observe repository change
+     */
     private suspend fun repositoryStatusChanged() {
         mMainViewModel.repositoryStatus.collect {
             when (it) {
                 APIService.CODE_CURRENCIES_RETRIEVED -> {
+                    // While received currencies data from API, to retrieve from DB
                     mMainViewModel.retrieveCurrenciesAsync()
                 }
 
                 APIService.CODE_LATEST_RATE_RETRIEVED -> {
+                    // While received lasted data from API, shows Snackbar
                     val dateTime =
                         Instant.now()
                             .atZone(ZoneId.systemDefault()).format(
@@ -191,6 +189,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 APIService.CODE_NETWORK_ERROR -> {
+                    // While received network error, shows Snackbar
+
                     Snackbar.make(
                         mActivityMainBinding.root,
                         getString(R.string.network_error),
@@ -199,6 +199,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 APIService.CODE_UNKNOWN_ERROR -> {
+                    // While received unknown error, shows Snackbar
+
                     Snackbar.make(
                         mActivityMainBinding.root,
                         getString(R.string.unknown_error),
@@ -207,6 +209,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 else -> {
+                    // While received http error code, shows Snackbar
+
                     Snackbar.make(
                         mActivityMainBinding.root,
                         getString(R.string.http_error, it),
@@ -217,6 +221,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Load available currencies into spinner
+     */
     private suspend fun loadAvailableCurrency() {
         mMainViewModel.currencies.collect {
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
@@ -237,6 +244,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Load persist history data in to recyclerview
+     */
     private suspend fun loadPersistData() {
         mMainViewModel.historyData.collect {
             it?.apply {

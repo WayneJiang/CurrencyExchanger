@@ -2,7 +2,6 @@ package com.wayne.currencyexchanger.repository.typeconverter
 
 import androidx.room.TypeConverter
 import java.time.Instant
-import java.time.LocalDate
 
 class InstantTypeConverter {
     @TypeConverter

@@ -1,22 +1,15 @@
 package com.wayne.currencyexchanger.view
 
 import android.content.Context
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textview.MaterialTextView
-import com.wayne.currencyexchanger.databinding.ViewCurrencyRateBinding
 import com.wayne.currencyexchanger.databinding.ViewItemDropdownBinding
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 /*
- * Copyright (c) 2023 GoMore Inc. All rights reserved.
+ * Copyright (c) 2023 Wayne Jiang All rights reserved.
  *
  * Created by Wayne Jiang on 2023/09/25
  */

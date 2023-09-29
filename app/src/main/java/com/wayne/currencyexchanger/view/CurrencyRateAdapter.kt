@@ -1,6 +1,5 @@
 package com.wayne.currencyexchanger.view
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -11,7 +10,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 /*
- * Copyright (c) 2023 GoMore Inc. All rights reserved.
+ * Copyright (c) 2023 Wayne Jiang All rights reserved.
  *
  * Created by Wayne Jiang on 2023/09/25
  */

@@ -21,7 +21,7 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 /*
- * Copyright (c) 2023 GoMore Inc. All rights reserved.
+ * Copyright (c) 2023 Wayne Jiang All rights reserved.
  *
  * Created by Wayne Jiang on 2023/09/25
  */
@@ -108,6 +108,7 @@ object APIService {
                             .build()
                             .adapter<Map<String, String>>(mapType)
 
+                    // Converts response json data to map then saves into DB
                     mapJsonAdapter.fromJson(response)?.forEach { (key, value) ->
                         CurrencyEntity(key, value).insert()
                     }
@@ -120,6 +121,7 @@ object APIService {
         } catch (throwable: Throwable) {
             Log.d("Wayne", Log.getStackTraceString(throwable))
 
+            // Determines exception type to tell UI
             val code =
                 if (throwable is UnknownHostException) {
                     CODE_NETWORK_ERROR
@@ -145,6 +147,7 @@ object APIService {
                             .build()
                             .adapter(LatestData::class.java)
 
+                    // Converts response json data to save into DB
                     latestDataJsonAdapter.fromJson(response)?.apply {
                         HistoryEntity(
                             base,
@@ -161,6 +164,7 @@ object APIService {
         } catch (throwable: Throwable) {
             Log.d("Wayne", Log.getStackTraceString(throwable))
 
+            // Determines exception type to tell UI
             val code =
                 if (throwable is UnknownHostException) {
                     CODE_NETWORK_ERROR

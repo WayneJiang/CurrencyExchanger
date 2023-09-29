@@ -1,6 +1,5 @@
 package com.wayne.currencyexchanger.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wayne.currencyexchanger.repository.APIService
@@ -36,6 +35,8 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             var currencyEntities = DatabaseManager.queryCurrencyEntities()
 
+            // If there is no data in DB, try to retrieve from API
+            // Otherwise load from DB
             if (currencyEntities.isEmpty()) {
                 APIService.requestCurrencies()
                 currencyEntities = DatabaseManager.queryCurrencyEntities()
@@ -48,9 +49,12 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             var historyData = DatabaseManager.queryHistoryEntity()
 
+            // If there is no data in DB, try to retrieve from API
+            // Otherwise load from DB
             if (historyData == null) {
                 APIService.requestLatest()
             } else {
+                // Only allow every 30 mins to retrieve newest data from API
                 if (Instant.now().epochSecond - historyData.timestamp.epochSecond > (30 * 60)) {
                     APIService.requestLatest()
                     historyData = DatabaseManager.queryHistoryEntity()

@@ -7,7 +7,7 @@ import retrofit2.http.GET
 import retrofit2.http.QueryMap
 
 /*
- * Copyright (c) 2023 GoMore Inc. All rights reserved.
+ * Copyright (c) 2023 Wayne Jiang All rights reserved.
  *
  * Created by Wayne Jiang on 2023/09/25
  */
